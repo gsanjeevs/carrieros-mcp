@@ -74,6 +74,32 @@ export interface PublicInvoiceDetail extends PublicInvoiceSummary {
   load_id: number | null
 }
 
+export interface PublicVehicle {
+  id: number
+  vehicle_number: string | null
+  nickname: string | null
+  status: string
+  photo_url: string | null
+}
+
+export interface ListVehiclesResponse {
+  vehicles: PublicVehicle[]
+}
+
+export interface PublicException {
+  entity_type: string
+  entity_id: number
+  exception_type: string
+  tier: string
+  title: string
+  detail: string
+  due_at: string | null
+}
+
+export interface ListExceptionsResponse {
+  exceptions: PublicException[]
+}
+
 export interface FinancialEvent {
   id: number
   event_type: string

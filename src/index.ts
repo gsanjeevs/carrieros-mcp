@@ -17,9 +17,11 @@ import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprot
 import { CarrierOsApiError, CarrierOsClient, loadConfigFromEnv } from './carrieros-client.js'
 import type {
   GetLoadResponse,
+  ListExceptionsResponse,
   ListFinancialEventsResponse,
   ListInvoicesResponse,
   ListLoadsResponse,
+  ListVehiclesResponse,
   PublicInvoiceDetail,
 } from './types.js'
 
@@ -71,6 +73,16 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
       },
     },
     {
+      name: 'list_vehicles',
+      description: 'List the carrier\'s active vehicles/trucks — number, nickname, status. Use this for questions like "how many trucks do we have" or "what\'s our fleet".',
+      inputSchema: { type: 'object', properties: {} },
+    },
+    {
+      name: 'list_exceptions',
+      description: 'List active operational exceptions (compliance issues, overdue invoices, missing proof-of-delivery, expiring credentials, etc.) that need attention. Use this for "what needs my attention right now" style questions.',
+      inputSchema: { type: 'object', properties: {} },
+    },
+    {
       name: 'list_financial_events',
       description: 'List a cursor-paginated ledger of invoice/settlement/expense events, oldest-relevant-window first — useful for "what changed recently" or building an activity summary. Pass the previous response\'s next_cursor to page forward.',
       inputSchema: {
@@ -115,6 +127,14 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         const id = args?.id
         if (typeof id !== 'number') return errorResult('id is required and must be a number')
         const result = await client.get<PublicInvoiceDetail>(`/api/public/v1/invoices/${id}`)
+        return textResult(result)
+      }
+      case 'list_vehicles': {
+        const result = await client.get<ListVehiclesResponse>('/api/public/v1/vehicles')
+        return textResult(result)
+      }
+      case 'list_exceptions': {
+        const result = await client.get<ListExceptionsResponse>('/api/public/v1/exceptions')
         return textResult(result)
       }
       case 'list_financial_events': {

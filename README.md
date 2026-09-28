@@ -2,7 +2,8 @@
 
 Local MCP (Model Context Protocol) server exposing CarrierOS's public
 developer API (`/api/public/v1/*`) as read-only LLM tools: `list_loads`,
-`get_load`, `list_invoices`, `get_invoice`, `list_financial_events`.
+`get_load`, `list_invoices`, `get_invoice`, `list_vehicles`,
+`list_exceptions`, `list_financial_events`.
 
 Authenticates via OAuth 2.0 client-credentials, the same flow any external
 CarrierOS integration uses (Settings → Developer API in the CarrierOS app
@@ -57,10 +58,20 @@ a real write against your business data.
 
 ## What's not exposed yet
 
-The public API surface itself is currently just loads, invoices, and
-financial-events (`carrieros-web/app/api/public/v1/`) — drivers, vehicles,
-exceptions, dispatch, etc. aren't reachable this way yet. Expanding this
-server means either the CarrierOS public API grows first, or this project
-starts calling the internal `/api/v1/*` surface directly with a real user
-session instead of an org-level OAuth client (a bigger, different kind of
-auth to get right — worth a separate conversation before doing it).
+**Drivers.** The public API has a `GET /api/public/v1/drivers` route, but it
+currently returns a 403 for every caller: the org-level OAuth client
+authenticates as a synthetic `finance`-role actor (deliberately
+least-privileged — see CarrierOS's `lib/public-api-auth.ts`), and listing
+drivers requires the `drivers` role capability, which `finance` doesn't hold.
+This is left as an open product/security decision on the CarrierOS side
+(should the public API get a dedicated capability set, or should this stay
+blocked) — not something to work around from this project. No `list_drivers`
+tool exists here until that's resolved.
+
+**Dispatch, customers, and anything else** not yet under
+`carrieros-web/app/api/public/v1/` isn't reachable this way at all.
+Expanding this server further means either the CarrierOS public API grows
+first, or this project starts calling the internal `/api/v1/*` surface
+directly with a real user session instead of an org-level OAuth client (a
+bigger, different kind of auth to get right — worth a separate conversation
+before doing it).
