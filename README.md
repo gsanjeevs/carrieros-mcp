@@ -1,0 +1,66 @@
+# carrieros-mcp
+
+Local MCP (Model Context Protocol) server exposing CarrierOS's public
+developer API (`/api/public/v1/*`) as read-only LLM tools: `list_loads`,
+`get_load`, `list_invoices`, `get_invoice`, `list_financial_events`.
+
+Authenticates via OAuth 2.0 client-credentials, the same flow any external
+CarrierOS integration uses (Settings → Developer API in the CarrierOS app
+issues the client id/secret).
+
+## Setup
+
+1. `npm install`
+2. Copy `.env.example` to `.env` and fill in your CarrierOS instance's URL
+   and OAuth client credentials (create one at Settings → Developer API,
+   requires Growth tier or above).
+3. `npm run build`
+
+## Using it from an MCP client
+
+Point your client (Claude Desktop, OpenClaw, etc.) at the built server. For
+Claude Desktop's `claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "carrieros": {
+      "command": "node",
+      "args": ["/absolute/path/to/carrieros-mcp/dist/index.js"],
+      "env": {
+        "CARRIEROS_BASE_URL": "http://localhost:3100",
+        "CARRIEROS_CLIENT_ID": "pub_client_...",
+        "CARRIEROS_CLIENT_SECRET": "pub_secret_..."
+      }
+    }
+  }
+}
+```
+
+If `env` is omitted, the server falls back to reading `.env` in this
+directory (via `dotenv`) — convenient for local dev, but an explicit `env`
+block in the client config is the more portable option since it doesn't
+depend on the process's working directory.
+
+## Local dev
+
+`npm run dev` runs the server directly against `.env` via `tsx`, no build
+step needed.
+
+## Scope, deliberately
+
+Every tool here is a GET request — nothing mutates data. If you want a tool
+that creates or updates something (marking an invoice paid, editing a load),
+add it as a new, clearly-named tool rather than overloading an existing one,
+and think about what confirmation step makes sense before an LLM can trigger
+a real write against your business data.
+
+## What's not exposed yet
+
+The public API surface itself is currently just loads, invoices, and
+financial-events (`carrieros-web/app/api/public/v1/`) — drivers, vehicles,
+exceptions, dispatch, etc. aren't reachable this way yet. Expanding this
+server means either the CarrierOS public API grows first, or this project
+starts calling the internal `/api/v1/*` surface directly with a real user
+session instead of an org-level OAuth client (a bigger, different kind of
+auth to get right — worth a separate conversation before doing it).
