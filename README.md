@@ -88,15 +88,16 @@ docker run -p 3000:3000 carrieros-mcp
   found, to confirm the service itself (not DNS) is the thing being tested.
 
 Deploy that image the same way `carrieros-web` deploys (AWS ECS Express
-Mode) — it needs no app-specific env vars at all, since tenant credentials
-arrive per-request. Put it behind TLS (ALB/CloudFront) since credentials
-travel in headers on every call. `GET /health` is the container health
+Mode). Header-authenticated callers send tenant credentials per-request; the
+OAuth flow additionally needs `MCP_PUBLIC_URL`, `CARRIEROS_BASE_URL`, and a
+private random `MCP_OAUTH_ENCRYPTION_KEY`. Put it behind TLS since credentials
+travel in OAuth forms or request headers. `GET /health` is the container health
 check; `POST /mcp` is the only MCP endpoint (the deployment is stateless, so
 `GET`/`DELETE /mcp` — used for server push and session teardown in stateful
 mode — aren't supported and return 405).
 
-Each customer calls it with their own CarrierOS OAuth client credentials
-(from their Settings → Developer API) as headers:
+Header-authenticated MCP clients may pass their CarrierOS OAuth client
+credentials (from Settings → Developer API) as headers:
 
 ```
 x-carrieros-base-url: https://<their-instance>.carrieros.com
@@ -104,7 +105,28 @@ x-carrieros-client-id: pub_client_...
 x-carrieros-client-secret: pub_secret_...
 ```
 
-### Connecting a customer's Claude Desktop to the hosted server
+### ChatGPT remote connector (OAuth)
+
+The hosted endpoint supports MCP OAuth 2.1 with PKCE and dynamic client
+registration. On an eligible ChatGPT Business, Enterprise, or Edu workspace,
+enable **Settings → Apps → Advanced settings → Developer mode**, then create
+an app using the hosted MCP URL above and OAuth authentication. On first
+authorization, the browser asks for that organization's CarrierOS Developer
+API client ID and secret, and shows an explicit read-only consent page.
+
+The MCP server encrypts those credentials into expiring OAuth tokens; it does
+not persist credentials in a database. `CARRIEROS_BASE_URL` fixes the upstream
+host accepted by this OAuth flow (staging for this deployment). Access tokens
+last one hour and refresh tokens last 30 days. Revoke access immediately by
+revoking the Developer API client in CarrierOS Settings → Developer API.
+`MCP_OAUTH_ENCRYPTION_KEY` must be a private, random 32-byte key encoded as
+Base64, and `MCP_PUBLIC_URL` must be the public HTTPS service origin.
+
+ChatGPT full MCP support is still a plan/workspace feature rollout. If
+Developer mode or app creation is unavailable, the workspace administrator
+must enable it or the account must use an eligible plan.
+
+### Connecting Claude Desktop to the hosted server
 
 Claude Desktop's remote/custom connector support (Settings → Connectors →
 Add Custom Connector) takes a URL, not a header map — if it doesn't offer a
@@ -117,13 +139,13 @@ proxy config entry using `mcp-remote` (or similar) to inject them:
     "carrieros": {
       "command": "npx",
       "args": [
-        "-y", "mcp-remote", "https://mcp.carrieros.com/mcp",
+        "-y", "mcp-remote", "https://ca-185d9362fe544fee8fa37d401aff0afb.ecs.us-east-1.on.aws/mcp",
         "--header", "x-carrieros-base-url:${CARRIEROS_BASE_URL}",
         "--header", "x-carrieros-client-id:${CARRIEROS_CLIENT_ID}",
         "--header", "x-carrieros-client-secret:${CARRIEROS_CLIENT_SECRET}"
       ],
       "env": {
-        "CARRIEROS_BASE_URL": "https://their-instance.carrieros.com",
+        "CARRIEROS_BASE_URL": "https://ca-aa167deb702e4a338c4370ff70576195.ecs.us-east-1.on.aws",
         "CARRIEROS_CLIENT_ID": "pub_client_...",
         "CARRIEROS_CLIENT_SECRET": "pub_secret_..."
       }
@@ -132,12 +154,14 @@ proxy config entry using `mcp-remote` (or similar) to inject them:
 }
 ```
 
-This still runs one small local process per customer (`npx mcp-remote`), but
+This still runs one small local process (`npx mcp-remote`), but
 it's a generic pass-through with no CarrierOS-specific code to install or
 update — all the actual logic and any future tool additions live on the
-hosted server. Verify the exact custom-connector header syntax against
-whatever Claude Desktop version the customer is on before shipping this
-broadly; connector configuration has changed across releases.
+hosted server. Claude Desktop versions that support OAuth remote MCP can add
+the hosted URL directly and complete the consent flow above. The
+`mcp-remote` setup remains a compatible header-auth fallback; local stdio
+configuration above remains the simplest option when running the process on
+the desktop.
 
 ## Scope, deliberately
 
@@ -149,15 +173,11 @@ a real write against your business data.
 
 ## What's not exposed yet
 
-**Drivers.** The public API has a `GET /api/public/v1/drivers` route, but it
-currently returns a 403 for every caller: the org-level OAuth client
-authenticates as a synthetic `finance`-role actor (deliberately
-least-privileged — see CarrierOS's `lib/public-api-auth.ts`), and listing
-drivers requires the `drivers` role capability, which `finance` doesn't hold.
-This is left as an open product/security decision on the CarrierOS side
-(should the public API get a dedicated capability set, or should this stay
-blocked) — not something to work around from this project. No `list_drivers`
-tool exists here until that's resolved.
+**Drivers.** A drivers route exists in CarrierOS's public API, but the public
+API's deliberately least-privileged `finance` actor does not have the
+`drivers` role capability. It returns 403 and this MCP server does not expose
+`list_drivers`; do not work around that boundary by changing the actor's role.
+Adding driver data requires a deliberate CarrierOS authorization decision.
 
 **Dispatch, customers, and anything else** not yet under
 `carrieros-web/app/api/public/v1/` isn't reachable this way at all.
