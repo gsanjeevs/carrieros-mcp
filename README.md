@@ -60,12 +60,32 @@ build step needed. `npm run dev:http` does the same for the HTTP server.
 
 ## Hosted deployment (HTTP, multi-tenant)
 
-Build and run the container:
+**Live on staging (2026-09-29):** `https://ca-185d9362fe544fee8fa37d401aff0afb.ecs.us-east-1.on.aws`
+— ECS Express service `carrieros-mcp-staging` in the `default` cluster, image in ECR repo
+`carrieros-mcp`. Verified end-to-end against real staging CarrierOS data (`GET /health` → `200`,
+a real `tools/call` for `list_vehicles` with real staging OAuth client credentials → real vehicle
+records). See `architecture/how-it-was-built.md` for the full build breakdown, and
+`carrieros/architecture/deployment.md` for the CarrierOS-side staging environment this depends on.
+
+Build and run the container locally:
 
 ```bash
 docker build -t carrieros-mcp .
 docker run -p 3000:3000 carrieros-mcp
 ```
+
+**Two real gotchas hit deploying this to ECS Express Mode, worth knowing if redeploying:**
+- **`minTaskCount: 0` never scales back up.** ECS Express Gateway's autoscaling here is CPU-based
+  (`AVERAGE_CPU`), which can't measure CPU on zero running tasks — there's no request-triggered
+  cold-start the way some serverless platforms offer. A service created with `minTaskCount: 0` and no
+  traffic just stays at zero forever, returning `503` from the gateway indefinitely. Set
+  `minTaskCount: 1` for anything that needs to actually answer requests (fine for this service — it's
+  a lightweight Node process, cheap to keep warm).
+- **DNS for a freshly created `*.ecs.*.on.aws` endpoint can lag the AWS API's own success response**
+  by a few minutes. `nslookup` may resolve before the system resolver (and therefore `curl`/browsers)
+  catches up — don't treat a `curl: (6) Could not resolve host` right after creation as a real failure;
+  wait a few minutes, or verify with `curl --resolve <host>:443:<ip>` using an IP `nslookup` already
+  found, to confirm the service itself (not DNS) is the thing being tested.
 
 Deploy that image the same way `carrieros-web` deploys (AWS ECS Express
 Mode) — it needs no app-specific env vars at all, since tenant credentials
