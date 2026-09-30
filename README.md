@@ -58,13 +58,18 @@ depend on the process's working directory.
 `npm run dev` runs the stdio server directly against `.env` via `tsx`, no
 build step needed. `npm run dev:http` does the same for the HTTP server.
 
+For the companion app's complete local machine setup (Node, Docker/Supabase,
+web/mobile co-development, simulator setup, and the local port gotchas), see
+the [CarrierOS local development guide](https://github.com/gsanjeevs/carrieros/blob/main/architecture/local-development.md).
+
 ## Hosted deployment (HTTP, multi-tenant)
 
-**Live on staging (2026-09-29):** `https://ca-185d9362fe544fee8fa37d401aff0afb.ecs.us-east-1.on.aws`
+**Live on staging (2026-09-29):** `https://ca-7dc84edc0bd24885b2af9d2ed91ecda4.ecs.us-east-1.on.aws`
 — ECS Express service `carrieros-mcp-staging` in the `default` cluster, image in ECR repo
 `carrieros-mcp`. Verified end-to-end against real staging CarrierOS data (`GET /health` → `200`,
 a real `tools/call` for `list_vehicles` with real staging OAuth client credentials → real vehicle
-records). See `architecture/how-it-was-built.md` for the full build breakdown, and
+records). See `architecture/how-it-was-built.md` for the full build breakdown,
+`architecture/deployment.md` for the reusable hosted-MCP deployment pattern and staging runbook, and
 `carrieros/architecture/deployment.md` for the CarrierOS-side staging environment this depends on.
 
 The service currently runs manually deployed images (this repo does not yet have its own
@@ -149,7 +154,7 @@ proxy config entry using `mcp-remote` (or similar) to inject them:
     "carrieros": {
       "command": "npx",
       "args": [
-        "-y", "mcp-remote", "https://ca-185d9362fe544fee8fa37d401aff0afb.ecs.us-east-1.on.aws/mcp",
+        "-y", "mcp-remote", "https://ca-7dc84edc0bd24885b2af9d2ed91ecda4.ecs.us-east-1.on.aws/mcp",
         "--header", "x-carrieros-base-url:${CARRIEROS_BASE_URL}",
         "--header", "x-carrieros-client-id:${CARRIEROS_CLIENT_ID}",
         "--header", "x-carrieros-client-secret:${CARRIEROS_CLIENT_SECRET}"
