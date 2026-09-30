@@ -134,22 +134,29 @@ enforce organization/tenant scope at the upstream API boundary.
 
 ## Staging deployment: current facts
 
-Last checked against AWS ECS on 2026-09-29:
+Last checked against AWS ECS on 2026-09-30.
+
+**Now managed by infrastructure-as-code.** This service is defined in AWS CDK in the
+`carrieros` repo at `infra/lib/staging-stack.ts`, not created by hand — read
+`carrieros/architecture/infrastructure-as-code.md` before changing it, and make
+changes there rather than with `aws` CLI calls, or the next `cdk deploy` will revert
+them. The original hand-built `carrieros-mcp-staging` still exists but is superseded
+and pending decommission.
 
 | Item | Staging value |
 |---|---|
 | AWS region / account | `us-east-1` / `308855860393` |
 | ECS cluster | `default` |
-| ECS Express service | `carrieros-mcp-staging` |
-| Public HTTPS origin | `https://ca-7dc84edc0bd24885b2af9d2ed91ecda4.ecs.us-east-1.on.aws` |
-| MCP endpoint | `https://ca-7dc84edc0bd24885b2af9d2ed91ecda4.ecs.us-east-1.on.aws/mcp` |
+| ECS Express service | `carrieros-mcp-staging-cdk` (CDK-managed) |
+| Public HTTPS origin | `https://ca-f68d8ab0d62b4f638db9eaec01052b4f.ecs.us-east-1.on.aws` |
+| MCP endpoint | `https://ca-f68d8ab0d62b4f638db9eaec01052b4f.ecs.us-east-1.on.aws/mcp` |
 | ECR repository | `308855860393.dkr.ecr.us-east-1.amazonaws.com/carrieros-mcp` |
-| Active image | `carrieros-mcp:c4040b0` |
+| Active image | `carrieros-mcp:latest` |
 | Container port / health path | `3000` / `/health` |
 | CPU / memory | `512` CPU units / `1024` MiB |
-| Task range | min `1`, max `2`; CPU target `60%` |
-| Log group | `/aws/ecs/default/carrieros-mcp-staging` |
-| Upstream CarrierOS staging | `https://ca-aa167deb702e4a338c4370ff70576195.ecs.us-east-1.on.aws` |
+| Task range | min `0`, max `1`; CPU target `60%` — min 0 means it will NOT serve until `carrieros/scripts/staging-resume.sh` is run (see below) |
+| Log group | `/aws/ecs/default/carrieros-mcp-staging-cdk` |
+| Upstream CarrierOS staging | `https://ca-4f7c487503aa47609a79a96746866bb8.ecs.us-east-1.on.aws` |
 | OAuth key secret | `carrieros-staging/MCP_OAUTH_ENCRYPTION_KEY` in Secrets Manager |
 | Task execution role | `carrieros-ecsTaskExecutionRole` |
 | Infrastructure role | `carrieros-ecsInfrastructureRole` |

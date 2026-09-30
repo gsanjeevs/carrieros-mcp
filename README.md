@@ -64,11 +64,21 @@ the [CarrierOS local development guide](https://github.com/gsanjeevs/carrieros/b
 
 ## Hosted deployment (HTTP, multi-tenant)
 
-**Live on staging (2026-09-29):** `https://ca-7dc84edc0bd24885b2af9d2ed91ecda4.ecs.us-east-1.on.aws`
-— ECS Express service `carrieros-mcp-staging` in the `default` cluster, image in ECR repo
+**Live on staging (2026-09-30, CDK-managed):**
+`https://ca-f68d8ab0d62b4f638db9eaec01052b4f.ecs.us-east-1.on.aws`
+— ECS Express service `carrieros-mcp-staging-cdk` in the `default` cluster, image in ECR repo
 `carrieros-mcp`. Verified end-to-end against real staging CarrierOS data (`GET /health` → `200`,
-a real `tools/call` for `list_vehicles` with real staging OAuth client credentials → real vehicle
-records). See `architecture/how-it-was-built.md` for the full build breakdown,
+a real `tools/call` for `list_vehicles` with freshly minted staging OAuth client credentials → real
+vehicle records for Sierra Freight Co).
+
+> **Defined as infrastructure-as-code**, in the `carrieros` repo at
+> `infra/lib/staging-stack.ts` — see
+> [`architecture/infrastructure-as-code.md`](https://github.com/gsanjeevs/carrieros/blob/main/architecture/infrastructure-as-code.md).
+> Change it there, not with `aws` CLI calls, or the next `cdk deploy` reverts you.
+> It runs at `minTaskCount: 0`, so it returns `503` until woken with
+> `carrieros/scripts/staging-resume.sh` — CPU-based autoscaling cannot scale up from
+> zero tasks. The older hand-built `carrieros-mcp-staging` service still exists but is
+> superseded and pending decommission. See `architecture/how-it-was-built.md` for the full build breakdown,
 `architecture/deployment.md` for the reusable hosted-MCP deployment pattern and staging runbook, and
 `carrieros/architecture/deployment.md` for the CarrierOS-side staging environment this depends on.
 
@@ -154,13 +164,13 @@ proxy config entry using `mcp-remote` (or similar) to inject them:
     "carrieros": {
       "command": "npx",
       "args": [
-        "-y", "mcp-remote", "https://ca-7dc84edc0bd24885b2af9d2ed91ecda4.ecs.us-east-1.on.aws/mcp",
+        "-y", "mcp-remote", "https://ca-f68d8ab0d62b4f638db9eaec01052b4f.ecs.us-east-1.on.aws/mcp",
         "--header", "x-carrieros-base-url:${CARRIEROS_BASE_URL}",
         "--header", "x-carrieros-client-id:${CARRIEROS_CLIENT_ID}",
         "--header", "x-carrieros-client-secret:${CARRIEROS_CLIENT_SECRET}"
       ],
       "env": {
-        "CARRIEROS_BASE_URL": "https://ca-aa167deb702e4a338c4370ff70576195.ecs.us-east-1.on.aws",
+        "CARRIEROS_BASE_URL": "https://ca-4f7c487503aa47609a79a96746866bb8.ecs.us-east-1.on.aws",
         "CARRIEROS_CLIENT_ID": "pub_client_...",
         "CARRIEROS_CLIENT_SECRET": "pub_secret_..."
       }
