@@ -67,6 +67,13 @@ a real `tools/call` for `list_vehicles` with real staging OAuth client credentia
 records). See `architecture/how-it-was-built.md` for the full build breakdown, and
 `carrieros/architecture/deployment.md` for the CarrierOS-side staging environment this depends on.
 
+The service currently runs manually deployed images (this repo does not yet have its own
+CodeBuild auto-deploy project). The OAuth-enabled staging revision uses `MCP_PUBLIC_URL` for
+the public MCP origin, `CARRIEROS_BASE_URL` for the fixed CarrierOS staging app, and the
+Secrets Manager secret `carrieros-staging/MCP_OAUTH_ENCRYPTION_KEY` injected as
+`MCP_OAUTH_ENCRYPTION_KEY`. The ECS execution role's `ReadCarrierOsMcpOauthKey` inline policy
+grants access only to that secret. There is no production MCP deployment.
+
 Build and run the container locally:
 
 ```bash
@@ -109,8 +116,9 @@ x-carrieros-client-secret: pub_secret_...
 
 The hosted endpoint supports MCP OAuth 2.1 with PKCE and dynamic client
 registration. On an eligible ChatGPT Business, Enterprise, or Edu workspace,
-enable **Settings → Apps → Advanced settings → Developer mode**, then create
-an app using the hosted MCP URL above and OAuth authentication. On first
+enable **Settings → Apps → Advanced settings → Developer mode**, choose
+**Apps → Create**, enter the hosted MCP URL above, select OAuth, scan the
+tools, and create the app. On first
 authorization, the browser asks for that organization's CarrierOS Developer
 API client ID and secret, and shows an explicit read-only consent page.
 
@@ -121,6 +129,8 @@ last one hour and refresh tokens last 30 days. Revoke access immediately by
 revoking the Developer API client in CarrierOS Settings → Developer API.
 `MCP_OAUTH_ENCRYPTION_KEY` must be a private, random 32-byte key encoded as
 Base64, and `MCP_PUBLIC_URL` must be the public HTTPS service origin.
+Changing the encryption key invalidates existing OAuth client registrations
+and access/refresh tokens; users must reconnect.
 
 ChatGPT full MCP support is still a plan/workspace feature rollout. If
 Developer mode or app creation is unavailable, the workspace administrator
