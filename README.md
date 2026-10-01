@@ -75,9 +75,12 @@ vehicle records for Sierra Freight Co).
 > `infra/lib/staging-stack.ts` — see
 > [`architecture/infrastructure-as-code.md`](https://github.com/gsanjeevs/carrieros/blob/main/architecture/infrastructure-as-code.md).
 > Change it there, not with `aws` CLI calls, or the next `cdk deploy` reverts you.
-> It runs at `minTaskCount: 0`, so it returns `503` until woken with
-> `carrieros/scripts/staging-resume.sh` — CPU-based autoscaling cannot scale up from
-> zero tasks. The older hand-built `carrieros-mcp-staging` service still exists but is
+> It runs always-on at `minTaskCount: 1` (account owner's decision, 2026-09-30) —
+> precisely because CPU-based autoscaling cannot scale up from zero tasks, so a 0 floor
+> would mean the service stays down until a human runs a script. It can still be parked
+> on demand with `carrieros/scripts/staging-pause.sh` and restored with
+> `staging-resume.sh`; note that a `cdk deploy` restores the configured 1. The older
+> hand-built `carrieros-mcp-staging` service still exists but is
 > superseded and pending decommission. See `architecture/how-it-was-built.md` for the full build breakdown,
 `architecture/deployment.md` for the reusable hosted-MCP deployment pattern and staging runbook, and
 `carrieros/architecture/deployment.md` for the CarrierOS-side staging environment this depends on.

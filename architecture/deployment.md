@@ -154,7 +154,7 @@ and pending decommission.
 | Active image | `carrieros-mcp:latest` |
 | Container port / health path | `3000` / `/health` |
 | CPU / memory | `512` CPU units / `1024` MiB |
-| Task range | min `0`, max `1`; CPU target `60%` — min 0 means it will NOT serve until `carrieros/scripts/staging-resume.sh` is run (see below) |
+| Task range | min `1`, max `1`; CPU target `60%` — always-on, precisely because CPU autoscaling cannot wake a service from zero (see the gotcha below). Park on demand with `carrieros/scripts/staging-pause.sh`. |
 | Log group | `/aws/ecs/default/carrieros-mcp-staging-cdk` |
 | Upstream CarrierOS staging | `https://ca-4f7c487503aa47609a79a96746866bb8.ecs.us-east-1.on.aws` |
 | OAuth key secret | `carrieros-staging/MCP_OAUTH_ENCRYPTION_KEY` in Secrets Manager |
